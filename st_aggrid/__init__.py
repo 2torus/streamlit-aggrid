@@ -1,16 +1,13 @@
-
-from decimal import InvalidOperation
 import os
 import streamlit.components.v1 as components
 import pandas as pd
-import numpy as np
 import json
 import warnings
 import typing
 
 from dataclasses import dataclass, field
 from decouple import config
-from typing import Any, List, Mapping, Union, Any
+from typing import List, Mapping, Union
 from st_aggrid.grid_options_builder import GridOptionsBuilder
 from st_aggrid.shared import GridUpdateMode, DataReturnMode, JsCode, walk_gridOptions
 
@@ -21,6 +18,7 @@ class AgGridReturn(Mapping):
     data: Union[pd.DataFrame , str] = None
     selected_rows: List[Mapping] = field(default_factory=list)
     column_state: any = None
+    event: any = None
 
     #Backwards compatibility with dict interface
     def __getitem__(self, __k):
@@ -28,13 +26,13 @@ class AgGridReturn(Mapping):
 
     def __iter__(self):
         return self.__dict__.__iter__()
-    
+
     def __len__(self) -> int:
         return self.__dict__.__len__()
 
     def keys(self):
         return self.__dict__.keys()
-    
+
     def values(self):
         return self.__dict__.values()
 
@@ -45,13 +43,13 @@ def __cast_date_columns_to_iso8601(dataframe: pd.DataFrame):
         if not d.kind == 'M':
             continue
         else:
-            dataframe[c] = dataframe[c].apply(lambda s: s.isoformat()) 
+            dataframe[c] = dataframe[c].apply(lambda s: s.isoformat())
 
 def __parse_row_data(data_parameter):
     """Internal method to process data from data_parameter"""
 
     if isinstance(data_parameter, pd.DataFrame):
-        __cast_date_columns_to_iso8601(data_parameter) 
+        __cast_date_columns_to_iso8601(data_parameter)
         row_data = data_parameter.to_json(orient='records', date_format='iso')
         return row_data
 
@@ -59,16 +57,16 @@ def __parse_row_data(data_parameter):
         import os
         import json
         is_path = data_parameter.endswith('.json') and os.path.exists(data_parameter)
-        
+
         if is_path:
             row_data = json.dumps(json.load(open(os.path.abspath(data_parameter))))
         else:
             row_data = json.dumps(json.loads(data_parameter))
-        
+
         return row_data
     else:
         raise ValueError("Invalid data")
-    
+
 
 def __parse_grid_options(gridOptions_parameter, dataframe, default_column_parameters, unsafe_allow_jscode):
     """Internal method to cast gridOptions parameter to a valid gridoptions"""
@@ -80,18 +78,18 @@ def __parse_grid_options(gridOptions_parameter, dataframe, default_column_parame
     #if it is a dict-like object, assumes is valid and use it.
     elif isinstance(gridOptions_parameter, Mapping):
         gridOptions = gridOptions_parameter
-    
+
     #if it is a string check if is valid path or a valid json and use it.
     elif isinstance(gridOptions_parameter, str):
         import os
         import json
         is_path = gridOptions_parameter.endswith('.json') and os.path.exists(gridOptions_parameter)
-        
+
         if is_path:
             gridOptions = json.load(open(os.path.abspath(gridOptions_parameter)))
         else:
             gridOptions = json.loads(gridOptions_parameter)
-    
+
     else:
         raise ValueError("gridOptions is invalid.")
 
@@ -118,28 +116,28 @@ def __parse_update_mode(update_mode: GridUpdateMode):
 
     if (update_mode & GridUpdateMode.VALUE_CHANGED):
         update_on.append("cellValueChanged")
-    
+
     if (update_mode & GridUpdateMode.SELECTION_CHANGED):
         update_on.append("selectionChanged")
 
     if (update_mode & GridUpdateMode.FILTERING_CHANGED):
         update_on.append("filterChanged")
-    
+
     if (update_mode & GridUpdateMode.SORTING_CHANGED):
         update_on.append("sortChanged")
-    
+
     if (update_mode & GridUpdateMode.COLUMN_RESIZED):
         update_on.append(("columnResized", 300))
-    
+
     if (update_mode & GridUpdateMode.COLUMN_MOVED):
         update_on.append(("columnMoved", 500))
-    
+
     if (update_mode & GridUpdateMode.COLUMN_PINNED):
         update_on.append("columnPinned")
 
     if (update_mode & GridUpdateMode.COLUMN_VISIBLE):
         update_on.append("columnVisible")
-        
+
     return update_on
 
 def AgGrid(
@@ -173,16 +171,16 @@ def AgGrid(
     gridOptions : typing.Dict, optional
         A dictionary of options for ag-grid. Documentation on www.ag-grid.com
         If None default grid options will be created with GridOptionsBuilder.from_dataframe() call. By default None
-    
+
     height : int, optional
         The grid height, by default 400
-    
+
     width : [type], optional
         Deprecated, by default None
-    
+
     fit_columns_on_grid_load : bool, optional
         Will adjust columns to fit grid width on grid load, by default False
-    
+
     update_mode : GridUpdateMode, optional
         UPDATE_MODE IS DEPRECATED. USE update_on instead.
 
@@ -208,16 +206,16 @@ def AgGrid(
         for instance:
             if update_on = ['cellValueChanged', ("columnResized", 500)]
             Grid will return when cell values are changed AND when columns are resized, however the later will
-            be debounced by 500 ms. More information about debounced functions 
+            be debounced by 500 ms. More information about debounced functions
             here: https://www.freecodecamp.org/news/javascript-debounce-example/
-    
+
     data_return_mode : DataReturnMode, optional
         Defines how the data will be retrieved from components client side. One of:
             DataReturnMode.AS_INPUT             -> Returns grid data as inputed. Includes cell editions
             DataReturnMode.FILTERED             -> Returns filtered grid data, maintains input order
             DataReturnMode.FILTERED_AND_SORTED  -> Returns grid data filtered and sorted
         Defaults to DataReturnMode.AS_INPUT.
-        
+
     allow_unsafe_jscode : bool, optional
         Allows jsCode to be injected in gridOptions.
         Defaults to False.
@@ -240,11 +238,11 @@ def AgGrid(
             'coerce'    -> then invalid parsing will be set as NaT/NaN.
             'ignore'    -> invalid parsing will return the input.
         Defaults to 'coerce'.
-    
+
     reload_data : bool, optional
         Force AgGrid to reload data using api calls. Should be false on most use cases
         By default False
-    
+
     theme : str, optional
         theme used by ag-grid. One of:
             'streamlit' -> follows default streamlit colors
@@ -254,21 +252,21 @@ def AgGrid(
             'fresh'     -> ag-grid fresh theme
             'material'  -> ag-grid material theme
         By default 'light'
-    
+
     custom_css (dict, optional):
         Custom CSS rules to be added to the component's iframe.
 
     key : typing.Any, optional
         Streamlits key argument. Check streamlit's documentation.
         Defaults to None.
-    
+
     **default_column_parameters:
         Other parameters will be passed as key:value pairs on gripdOptions defaultColDef.
 
     Returns
     -------
     Dict
-        returns a dictionary with grid's data is in dictionary's 'data' key. 
+        returns a dictionary with grid's data is in dictionary's 'data' key.
         Other keys may be present depending on gridOptions parameters
     """
 
@@ -277,7 +275,7 @@ def AgGrid(
 
     if (not isinstance(theme, str)) or (not theme in __AVAILABLE_THEMES):
         raise ValueError(f"{theme} is not valid. Available options: {__AVAILABLE_THEMES}")
-    
+
     if (not isinstance(data_return_mode, (str, DataReturnMode))):
         raise ValueError(f"DataReturnMode should be either a DataReturnMode enum value or a string.")
     elif isinstance(data_return_mode, str):
@@ -285,7 +283,7 @@ def AgGrid(
             data_return_mode = DataReturnMode[data_return_mode.upper()]
         except:
             raise ValueError(f"{data_return_mode} is not valid.")
-    
+
     if (not isinstance(update_mode, (str, GridUpdateMode))):
         raise ValueError(f"GridUpdateMode should be either a valid GridUpdateMode enum value or string")
     elif isinstance(update_mode, str):
@@ -317,10 +315,10 @@ def AgGrid(
         component_value = _component_func(
             gridOptions=gridOptions,
             row_data=row_data,
-            height=height, 
+            height=height,
             width=width,
-            fit_columns_on_grid_load=fit_columns_on_grid_load, 
-            data_return_mode=data_return_mode, 
+            fit_columns_on_grid_load=fit_columns_on_grid_load,
+            data_return_mode=data_return_mode,
             frame_dtypes=frame_dtypes,
             allow_unsafe_jscode=allow_unsafe_jscode,
             enable_enterprise_modules=enable_enterprise_modules,
@@ -372,7 +370,7 @@ def AgGrid(
                     frame.loc[:,timedelta_columns] = frame.loc[:,timedelta_columns].apply(cast_to_timedelta)
 
         response.data = frame
-        
+
         if use_legacy_selected_rows:
             response.selected_rows = component_value["selectedRows"]
         else:
@@ -380,5 +378,5 @@ def AgGrid(
 
         response.column_state = component_value["colState"]
 
-    
+
     return response
