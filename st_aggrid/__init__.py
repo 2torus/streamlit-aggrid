@@ -377,6 +377,7 @@ def AgGrid(
             response.selected_rows = component_value["selectedItems"]
 
         response.column_state = component_value["colState"]
+        response.event = component_value["returnEvent"]
 
 
     return response

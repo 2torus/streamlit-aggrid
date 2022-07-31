@@ -218,6 +218,7 @@ class AgGrid extends StreamlitComponentBase<State> {
 
   private attachUpdateEvents(api: GridApi) {
     let updateEvents = this.props.args.update_on[0]
+    console.log("update events", updateEvents); // TODO: remove
     const doReturn = (e: any) => this.returnGridValue(e)
 
     updateEvents.forEach((element: any) => {
@@ -303,9 +304,42 @@ class AgGrid extends StreamlitComponentBase<State> {
     }
   }
 
-  private returnGridValue(e: any) {
+  private getContextMenuItems(e: any) {
+      return [
+              {name: 'new item',
+               action: () => {console.log(e); console.log(Object.keys(e))
+                       this.returnGridValue({}, {type: 'ContextMenuClicked', 
+                               name: 'new item',
+                               column: e.column.instanceId,
+                               row: e.node.rowIndex});
+
+               }},
+               {name: 'Delete row',
+                action: () => {console.log(e); console.log(Object.keys(e))
+                       this.returnGridValue({}, {type: 'ContextMenuClicked', 
+                               name: 'Delete row',
+                               column: e.column.instanceId,
+                               row: e.node.rowIndex});
+
+               }}, 
+                {name: 'Insert row',
+               action: () => {console.log(e); console.log(Object.keys(e))
+                       this.returnGridValue({}, {type: 'ContextMenuClicked', 
+                               name: 'Insert row',
+                               column: e.column.instanceId,
+                               row: e.node.rowIndex});
+
+               }},
+              'export'
+      ];
+
+  }
+
+  private returnGridValue(e: any, userEvent?: any) {
+          console.log(userEvent); // TODO: remove this
     let returnData: any[] = []
     let returnMode = this.props.args.data_return_mode
+    let returnEvent = userEvent;
 
     switch (returnMode) {
       case 0: //ALL_DATA
@@ -348,6 +382,7 @@ class AgGrid extends StreamlitComponentBase<State> {
         .getSelectedNodes()
         .map((n) => ({ rowIndex: n.rowIndex, ...n.data })),
       colState: this.columnApi.getColumnState(),
+      returnEvent
     }
 
     Streamlit.setComponentValue(returnValue)
@@ -396,6 +431,7 @@ class AgGrid extends StreamlitComponentBase<State> {
         <AgGridReact
           onGridReady={(e) => this.onGridReady(e)}
           gridOptions={this.gridOptions}
+          getContextMenuItems={(e) => this.getContextMenuItems(e)}
         ></AgGridReact>
       </div>
     )
